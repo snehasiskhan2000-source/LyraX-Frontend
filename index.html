@@ -3,72 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX - NextGen Player</title>
+    <title>LyraX - techbittu.in</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
-        body { background: #080808; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
-        .neon-glow { box-shadow: 0 0 30px rgba(29, 185, 84, 0.3); }
-        .pnr-border { border-left: 4px solid #1DB954; }
-        @keyframes flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .bg-animate { background: linear-gradient(-45deg, #000000, #0a1f0e, #000000); background-size: 400% 400%; animation: flow 10s infinite; }
+        body { background: #050505; color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
+        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); border-radius: 40px; }
+        .neon-shadow { box-shadow: 0 0 40px rgba(29, 185, 84, 0.2); }
+        .progress-bar { height: 4px; background: #1DB954; border-radius: 2px; transition: width 1s linear; }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .status-pulse { animation: pulse 2s infinite; }
     </style>
 </head>
-<body class="bg-animate flex items-center justify-center p-4">
+<body class="flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top,#112211,transparent)]">
 
-    <div id="player-card" class="glass w-full max-w-sm rounded-[2.5rem] p-8 transition-all duration-700 opacity-0 translate-y-10">
-        <div class="flex justify-between items-start mb-10">
-            <div>
-                <h1 class="text-3xl font-black tracking-tighter italic">LYRA<span class="text-green-500">X</span></h1>
-                <p class="text-[10px] text-zinc-500 tracking-[0.3em] uppercase mt-1">Status: Operational</p>
-            </div>
-            <div id="pnr-tag" class="bg-green-500/10 text-green-500 text-[10px] px-3 py-1 rounded-full font-bold border border-green-500/20">SESSION v2.0</div>
+    <div id="player" class="glass-card w-full max-w-sm p-8 neon-shadow">
+        <div class="flex justify-between items-center mb-10">
+            <h1 class="text-2xl font-black italic tracking-tighter">LYRA<span class="text-green-500">X</span></h1>
+            <span id="pnr-tag" class="text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full font-bold border border-green-500/30">SYNCED</span>
         </div>
 
-        <div class="relative group mb-8">
-            <img id="track-art" src="https://via.placeholder.com/400/101010/1DB954?text=LyraX" class="w-full aspect-square rounded-3xl object-cover neon-glow transition-transform duration-500 group-hover:scale-105">
+        <div class="relative mb-8 group">
+            <img id="track-art" src="https://via.placeholder.com/400/101010/1DB954?text=LyraX" class="w-full aspect-square rounded-[30px] object-cover shadow-2xl transition-all duration-500">
         </div>
 
-        <div class="pnr-border pl-4 mb-10">
-            <h2 id="track-name" class="text-xl font-bold truncate">System Standby</h2>
-            <p id="artist-name" class="text-zinc-500 text-sm">Initialize Auth to Begin</p>
+        <div class="mb-8 border-l-2 border-green-500 pl-4">
+            <h2 id="track-name" class="text-xl font-bold truncate tracking-tight">System Online</h2>
+            <p id="artist-name" class="text-zinc-500 text-sm font-medium">Ready to receive stream</p>
         </div>
 
-        <button onclick="login()" id="action-btn" class="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-green-500 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95">
+        <div class="w-full bg-zinc-800 h-1 rounded-full mb-8 overflow-hidden">
+            <div id="progress" class="progress-bar" style="width: 0%"></div>
+        </div>
+
+        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-white text-black font-black rounded-2xl hover:scale-95 transition-transform">
             INITIALIZE AUTH
         </button>
     </div>
 
     <script>
-        // CONFIG: Replace with your actual Live Backend URL
         const BACKEND = "https://lyrax-backend.onrender.com"; 
-
-        window.onload = () => {
-            document.getElementById('player-card').classList.remove('opacity-0', 'translate-y-10');
-            const params = new URLSearchParams(window.location.search);
-            if(params.get('token')) initPlayer(params.get('token'));
-        };
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('token');
 
         function login() { window.location.href = `${BACKEND}/login`; }
 
-        function initPlayer(token) {
-            document.getElementById('action-btn').innerText = "CONNECTING...";
+        window.onSpotifyWebPlaybackSDKReady = () => {
+            if (!token) return;
             const player = new Spotify.Player({
                 name: 'LyraX Web Player',
                 getOAuthToken: cb => { cb(token); },
                 volume: 0.5
             });
 
+            // --- THE FIX: LISTEN FOR SONG CHANGES ---
+            player.addListener('player_state_changed', state => {
+                if (!state) return;
+                const track = state.track_window.current_track;
+                
+                document.getElementById('track-art').src = track.album.images[0].url;
+                document.getElementById('track-name').innerText = track.name;
+                document.getElementById('artist-name').innerText = track.artists[0].name;
+                document.getElementById('auth-btn').style.display = 'none';
+                
+                // Progress Bar Logic
+                const percent = (state.position / state.duration) * 100;
+                document.getElementById('progress').style.width = percent + "%";
+            });
+
             player.addListener('ready', ({ device_id }) => {
-                document.getElementById('track-name').innerText = "System Online";
-                document.getElementById('artist-name').innerText = "Ready to receive stream";
-                document.getElementById('action-btn').style.display = 'none';
-                document.getElementById('pnr-tag').innerText = "SYNCED";
+                document.getElementById('track-name').innerText = "Connected!";
+                document.getElementById('artist-name').innerText = "Select 'LyraX' in Spotify App";
+                document.getElementById('auth-btn').innerText = "DEVICE READY";
             });
 
             player.connect();
-        }
+        };
     </script>
 </body>
 </html>
