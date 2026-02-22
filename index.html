@@ -3,62 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX - Premium Experience</title>
+    <title>LyraX - NextGen Player</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
-        body { background: radial-gradient(circle at top, #121212, #000); height: 100vh; color: white; overflow: hidden; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 30px; }
-        .neon-text { text-shadow: 0 0 10px #1DB954; }
-        @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-pnr { animation: slideIn 0.8s ease-out; }
+        body { background: #080808; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+        .neon-glow { box-shadow: 0 0 30px rgba(29, 185, 84, 0.3); }
+        .pnr-border { border-left: 4px solid #1DB954; }
+        @keyframes flow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .bg-animate { background: linear-gradient(-45deg, #000000, #0a1f0e, #000000); background-size: 400% 400%; animation: flow 10s infinite; }
     </style>
 </head>
-<body class="flex flex-col items-center justify-center p-6">
-    <div class="glass w-full max-w-md p-8 animate-pnr shadow-2xl">
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-2xl font-black tracking-tighter neon-text">LYRA<span class="text-green-500">X</span></h1>
-            <div id="status-dot" class="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_8px_red]"></div>
+<body class="bg-animate flex items-center justify-center p-4">
+
+    <div id="player-card" class="glass w-full max-w-sm rounded-[2.5rem] p-8 transition-all duration-700 opacity-0 translate-y-10">
+        <div class="flex justify-between items-start mb-10">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter italic">LYRA<span class="text-green-500">X</span></h1>
+                <p class="text-[10px] text-zinc-500 tracking-[0.3em] uppercase mt-1">Status: Operational</p>
+            </div>
+            <div id="pnr-tag" class="bg-green-500/10 text-green-500 text-[10px] px-3 py-1 rounded-full font-bold border border-green-500/20">SESSION v2.0</div>
         </div>
 
-        <div class="relative mb-8 group">
-            <img id="art" src="https://via.placeholder.com/300/121212/1DB954?text=LyraX" class="w-full aspect-square rounded-2xl object-cover">
-            <div class="absolute inset-0 bg-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl"></div>
+        <div class="relative group mb-8">
+            <img id="track-art" src="https://via.placeholder.com/400/101010/1DB954?text=LyraX" class="w-full aspect-square rounded-3xl object-cover neon-glow transition-transform duration-500 group-hover:scale-105">
         </div>
 
-        <div class="text-center mb-10">
-            <h2 id="name" class="text-xl font-bold truncate">Initialize System</h2>
-            <p id="artist" class="text-zinc-500 text-sm">Status: Awaiting Auth</p>
+        <div class="pnr-border pl-4 mb-10">
+            <h2 id="track-name" class="text-xl font-bold truncate">System Standby</h2>
+            <p id="artist-name" class="text-zinc-500 text-sm">Initialize Auth to Begin</p>
         </div>
 
-        <button onclick="startAuth()" id="auth-btn" class="w-full py-4 bg-white text-black font-black rounded-full hover:scale-105 transition-transform">
-            START SESSION
+        <button onclick="login()" id="action-btn" class="w-full py-4 bg-white text-black font-black rounded-2xl hover:bg-green-500 hover:text-white transition-all transform hover:-translate-y-1 active:scale-95">
+            INITIALIZE AUTH
         </button>
     </div>
 
     <script>
-        const BACKEND = "https://your-backend-service.onrender.com"; 
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
+        // CONFIG: Replace with your actual Live Backend URL
+        const BACKEND = "https://lyrax-backend.onrender.com"; 
 
-        function startAuth() { window.location.href = `${BACKEND}/login`; }
+        window.onload = () => {
+            document.getElementById('player-card').classList.remove('opacity-0', 'translate-y-10');
+            const params = new URLSearchParams(window.location.search);
+            if(params.get('token')) initPlayer(params.get('token'));
+        };
 
-        window.onSpotifyWebPlaybackSDKReady = () => {
-            if (!token) return;
+        function login() { window.location.href = `${BACKEND}/login`; }
+
+        function initPlayer(token) {
+            document.getElementById('action-btn').innerText = "CONNECTING...";
             const player = new Spotify.Player({
-                name: 'LyraX Player',
+                name: 'LyraX Web Player',
                 getOAuthToken: cb => { cb(token); },
                 volume: 0.5
             });
 
             player.addListener('ready', ({ device_id }) => {
-                document.getElementById('status-dot').className = "h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_#1DB954]";
-                document.getElementById('artist').innerText = "System Online • Play on Spotify";
-                document.getElementById('auth-btn').style.display = 'none';
+                document.getElementById('track-name').innerText = "System Online";
+                document.getElementById('artist-name').innerText = "Ready to receive stream";
+                document.getElementById('action-btn').style.display = 'none';
+                document.getElementById('pnr-tag').innerText = "SYNCED";
             });
 
             player.connect();
-        };
+        }
     </script>
 </body>
 </html>
