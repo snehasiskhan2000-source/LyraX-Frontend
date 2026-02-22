@@ -3,37 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX Blue - techbittu.in</title>
+    <title>LyraX Blue | techbittu.in</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
-        body { background: #020205; color: white; font-family: 'Syncopate', sans-serif; overflow: hidden; }
-        .blue-glow { box-shadow: 0 0 30px rgba(0, 210, 255, 0.3); }
-        .glass-blue { background: rgba(0, 10, 30, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(0, 210, 255, 0.2); }
-        .blue-text { color: #00d2ff; text-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
-        .lyrics-box { height: 100px; overflow-y: auto; scrollbar-width: none; mask-image: linear-gradient(transparent, black 20%, black 80%, transparent); }
+        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap');
+        body { background: #020205; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .blue-glow { box-shadow: 0 0 40px rgba(0, 210, 255, 0.25); }
+        .glass-blue { background: rgba(0, 15, 35, 0.7); backdrop-filter: blur(25px); border: 1px solid rgba(0, 210, 255, 0.15); }
+        .neon-blue-text { color: #00d2ff; text-shadow: 0 0 12px rgba(0, 210, 255, 0.6); font-family: 'Syncopate', sans-serif; }
+        .lyrics-scroll { height: 120px; overflow-y: auto; scrollbar-width: none; mask-image: linear-gradient(transparent, black 25%, black 75%, transparent); }
+        #track-art { animation: pulse-glow 4s infinite ease-in-out; border-radius: 2.5rem; }
+        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 210, 255, 0.3)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.6)); } }
     </style>
 </head>
-<body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_bottom,#001a33,transparent)]">
+<body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_top,#00152b,transparent)]">
 
-    <div id="player" class="glass-blue w-full max-w-sm p-8 rounded-[3rem] blue-glow">
-        <div class="flex justify-between items-center mb-6">
-            <h1 class="text-xl font-bold tracking-widest blue-text italic">LYRA<span class="text-white">X</span></h1>
-            <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+    <div id="main-container" class="glass-blue w-full max-w-sm p-8 rounded-[3.5rem] blue-glow border-t border-white/10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-sm font-bold tracking-[0.3em] neon-blue-text uppercase">LyraX <span class="text-white">OS</span></h1>
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_10px_#00d2ff] animate-pulse"></div>
         </div>
 
-        <img id="track-art" src="https://via.placeholder.com/400/020205/00d2ff?text=LYRAX+BLUE" class="w-full aspect-square rounded-[2rem] object-cover mb-6 border border-white/10">
+        <img id="track-art" src="https://via.placeholder.com/400/020205/00d2ff?text=LyraX+Standby" class="w-full aspect-square object-cover mb-8 shadow-2xl">
 
-        <div class="mb-6">
-            <h2 id="track-name" class="text-xl font-bold truncate">Initialize System</h2>
-            <p id="artist-name" class="text-cyan-400/60 text-xs tracking-widest uppercase mt-1">Standby Mode</p>
+        <div class="mb-6 border-l-2 border-cyan-500 pl-4">
+            <h2 id="track-name" class="text-xl font-black truncate tracking-tight">System Offline</h2>
+            <p id="artist-name" class="text-cyan-400/50 text-[10px] font-bold tracking-[0.2em] uppercase mt-1">Initialize Connection</p>
         </div>
 
-        <div id="lyrics-container" class="lyrics-box text-center text-xs text-white/40 mb-6 italic leading-relaxed">
-            Connect and play to sync lyrics...
+        <div id="lyrics-container" class="lyrics-scroll text-center text-[11px] text-white/40 mb-8 italic leading-relaxed px-2">
+            Waiting for audio stream...
         </div>
 
-        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-cyan-500 text-black font-black rounded-2xl hover:bg-white transition-all duration-300">
+        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-cyan-500 text-black font-black rounded-2xl hover:bg-white hover:scale-95 transition-all duration-300 shadow-lg shadow-cyan-500/20">
             CONNECT SYSTEM
         </button>
     </div>
@@ -42,6 +45,7 @@
         const BACKEND = "https://lyrax-backend.onrender.com"; 
         const params = new URLSearchParams(window.location.search);
         const token = params.get('token');
+        let currentTrackId = null;
 
         function login() { window.location.href = `${BACKEND}/login`; }
 
@@ -57,26 +61,37 @@
                 if (!state) return;
                 const track = state.track_window.current_track;
                 
+                // Update UI
                 document.getElementById('track-art').src = track.album.images[0].url;
                 document.getElementById('track-name').innerText = track.name;
                 document.getElementById('artist-name').innerText = track.artists[0].name;
                 document.getElementById('auth-btn').style.display = 'none';
 
-                // Fetch Lyrics from our new Backend Route
-                fetch(`${BACKEND}/lyrics?track_id=${track.id}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        // Adjust 'data.lyrics' based on your specific RapidAPI response format
-                        document.getElementById('lyrics-container').innerText = data.lyrics || "Lyrics Synced via RapidAPI";
-                    })
-                    .catch(() => {
-                        document.getElementById('lyrics-container').innerText = "Lyrics currently unavailable.";
-                    });
+                // Fetch Lyrics only if song changes (Saves your 500-request quota)
+                if (track.id !== currentTrackId) {
+                    currentTrackId = track.id;
+                    document.getElementById('lyrics-container').innerText = "Syncing lyrics...";
+
+                    fetch(`${BACKEND}/lyrics?track_id=${track.id}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.lyrics && data.lyrics.lines) {
+                                const lyricsHtml = data.lyrics.lines.map(l => l.words).join('<br><br>');
+                                document.getElementById('lyrics-container').innerHTML = lyricsHtml;
+                            } else {
+                                document.getElementById('lyrics-container').innerText = "Lyrics not available for this track.";
+                            }
+                        })
+                        .catch(() => {
+                            document.getElementById('lyrics-container').innerText = "Lyrics System Error.";
+                        });
+                }
             });
 
             player.addListener('ready', ({ device_id }) => {
-                document.getElementById('track-name').innerText = "System Ready";
-                document.getElementById('auth-btn').innerText = "SELECT DEVICE";
+                document.getElementById('track-name').innerText = "Ready to Play";
+                document.getElementById('artist-name').innerText = "Switch device to LyraX";
+                document.getElementById('auth-btn').innerText = "SYSTEM CONNECTED";
             });
 
             player.connect();
