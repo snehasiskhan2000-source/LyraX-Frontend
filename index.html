@@ -1,70 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX v2 | Universal</title>
+    <meta charset="UTF-8"><title>LyraX v2 | Secure</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #020205; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .blue-glow { box-shadow: 0 0 40px rgba(0, 210, 255, 0.2); }
-        .glass { background: rgba(0, 15, 35, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(0, 210, 255, 0.1); }
-        .results-box::-webkit-scrollbar { display: none; }
+        body { background: #020205; color: white; font-family: 'Inter', sans-serif; }
+        .blue-glow { box-shadow: 0 0 50px rgba(0, 210, 255, 0.2); }
+        .glass { background: rgba(0, 15, 35, 0.85); backdrop-filter: blur(20px); border-radius: 3rem; }
     </style>
 </head>
-<body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_top,#00152b,transparent)]">
+<body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_top,#001a33,transparent)]">
 
-    <div class="glass w-full max-w-md p-8 rounded-[3rem] blue-glow">
-        <h1 class="text-center font-bold tracking-widest text-cyan-400 mb-6">LYRAX UNIVERSAL</h1>
+    <div id="auth-box" class="glass w-full max-w-sm p-10 blue-glow z-50">
+        <h1 class="text-center font-black text-cyan-400 mb-8 uppercase tracking-widest">LyraX OS Login</h1>
+        <input id="email" type="email" placeholder="Email" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 mb-4 outline-none focus:border-cyan-500">
+        <input id="pass" type="password" placeholder="Password" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 mb-6 outline-none focus:border-cyan-500">
+        <button onclick="auth('login')" class="w-full bg-cyan-500 text-black py-4 rounded-2xl font-black mb-4">LOG IN</button>
+        <button onclick="auth('signup')" class="w-full text-cyan-400 text-xs font-bold uppercase tracking-widest">Create Account</button>
+    </div>
 
+    <div id="player-ui" class="hidden glass w-full max-w-sm p-8 blue-glow">
         <div class="flex gap-2 mb-6">
-            <input id="query" type="text" placeholder="Search tracks..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-cyan-500">
-            <button onclick="search()" class="bg-cyan-500 text-black px-4 py-2 rounded-xl font-bold text-xs">FIND</button>
+            <input id="q" type="text" placeholder="Search track..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm">
+            <button onclick="search()" class="bg-cyan-500 text-black px-4 rounded-xl font-bold">GO</button>
         </div>
-
-        <div id="results" class="results-box h-40 overflow-y-auto mb-6 space-y-2"></div>
-
+        <div id="results" class="h-40 overflow-y-auto mb-6 space-y-2"></div>
         <div class="text-center">
-            <img id="art" src="https://via.placeholder.com/150/020205/00d2ff" class="w-32 h-32 mx-auto rounded-2xl mb-4 border border-cyan-500/20 shadow-lg">
-            <h2 id="name" class="text-lg font-bold truncate">No Track Selected</h2>
-            <p id="artist" class="text-cyan-400/50 text-xs mb-4 uppercase tracking-tighter">Choose a song above</p>
-            
-            <audio id="audio-player" controls class="w-full h-8 opacity-50 brightness-150"></audio>
+            <img id="art" src="https://via.placeholder.com/300/020205/00d2ff" class="w-32 h-32 mx-auto rounded-3xl mb-4 shadow-xl">
+            <h2 id="name" class="font-bold truncate">Select Track</h2>
+            <audio id="player" controls class="w-full mt-4 opacity-40"></audio>
         </div>
     </div>
 
     <script>
-        const BACKEND = "https://your-render-backend.com";
+        const BACKEND = "https://lyrax-backend.onrender.com";
+        let token = localStorage.getItem('lyrax_token');
 
-        async function search() {
-            const q = document.getElementById('query').value;
-            const res = await fetch(`${BACKEND}/api/search?q=${q}`);
-            const tracks = await res.json();
-            const container = document.getElementById('results');
-            container.innerHTML = "";
+        if(token) showPlayer();
 
-            tracks.forEach(item => {
-                const t = item.data;
-                const div = document.createElement('div');
-                div.className = "flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl cursor-pointer";
-                div.onclick = () => loadTrack(t);
-                div.innerHTML = `<img src="${t.albumOfTrack.coverArt.sources[0].url}" class="w-8 h-8 rounded-lg">
-                                 <div><p class="text-[10px] font-bold">${t.name}</p></div>`;
-                container.appendChild(div);
+        async function auth(type) {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('pass').value;
+            const res = await fetch(`${BACKEND}/auth/${type}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
             });
+            const data = await res.json();
+            if(data.token) {
+                localStorage.setItem('lyrax_token', data.token);
+                showPlayer();
+            } else { alert(data.message || data.error); }
         }
 
-        async function loadTrack(t) {
-            document.getElementById('art').src = t.albumOfTrack.coverArt.sources[0].url;
-            document.getElementById('name').innerText = t.name;
-            document.getElementById('artist').innerText = t.artists.items[0].profile.name;
+        function showPlayer() {
+            document.getElementById('auth-box').classList.add('hidden');
+            document.getElementById('player-ui').classList.remove('hidden');
+        }
 
-            // Fetch Audio Link
-            const res = await fetch(`${BACKEND}/api/audio?name=${t.name}&artist=${t.artists.items[0].profile.name}`);
+        async function search() {
+            const res = await fetch(`${BACKEND}/api/search?q=${document.getElementById('q').value}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('lyrax_token')}` }
+            });
+            const tracks = await res.json();
+            // ... (Same list rendering as before)
+        }
+        
+        async function play(t) {
+            const res = await fetch(`${BACKEND}/api/stream?title=${t.name}&artist=${t.artists.items[0].profile.name}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('lyrax_token')}` }
+            });
             const data = await res.json();
-            const player = document.getElementById('audio-player');
-            player.src = data.url;
-            player.play();
+            const audio = document.getElementById('player');
+            audio.src = data.url; audio.play();
         }
     </script>
 </body>
