@@ -3,99 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX Blue | techbittu.in</title>
+    <title>LyraX v2 | Universal</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Syncopate:wght@400;700&display=swap');
         body { background: #020205; color: white; font-family: 'Inter', sans-serif; overflow: hidden; }
-        .blue-glow { box-shadow: 0 0 40px rgba(0, 210, 255, 0.25); }
-        .glass-blue { background: rgba(0, 15, 35, 0.7); backdrop-filter: blur(25px); border: 1px solid rgba(0, 210, 255, 0.15); }
-        .neon-blue-text { color: #00d2ff; text-shadow: 0 0 12px rgba(0, 210, 255, 0.6); font-family: 'Syncopate', sans-serif; }
-        .lyrics-scroll { height: 120px; overflow-y: auto; scrollbar-width: none; mask-image: linear-gradient(transparent, black 25%, black 75%, transparent); }
-        #track-art { animation: pulse-glow 4s infinite ease-in-out; border-radius: 2.5rem; }
-        @keyframes pulse-glow { 0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 210, 255, 0.3)); } 50% { filter: drop-shadow(0 0 20px rgba(0, 210, 255, 0.6)); } }
+        .blue-glow { box-shadow: 0 0 40px rgba(0, 210, 255, 0.2); }
+        .glass { background: rgba(0, 15, 35, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(0, 210, 255, 0.1); }
+        .results-box::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_top,#00152b,transparent)]">
 
-    <div id="main-container" class="glass-blue w-full max-w-sm p-8 rounded-[3.5rem] blue-glow border-t border-white/10">
-        <div class="flex justify-between items-center mb-8">
-            <h1 class="text-sm font-bold tracking-[0.3em] neon-blue-text uppercase">LyraX <span class="text-white">OS</span></h1>
-            <div id="status-dot" class="w-2 h-2 rounded-full bg-cyan-500 shadow-[0_0_10px_#00d2ff] animate-pulse"></div>
+    <div class="glass w-full max-w-md p-8 rounded-[3rem] blue-glow">
+        <h1 class="text-center font-bold tracking-widest text-cyan-400 mb-6">LYRAX UNIVERSAL</h1>
+
+        <div class="flex gap-2 mb-6">
+            <input id="query" type="text" placeholder="Search tracks..." class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:border-cyan-500">
+            <button onclick="search()" class="bg-cyan-500 text-black px-4 py-2 rounded-xl font-bold text-xs">FIND</button>
         </div>
 
-        <img id="track-art" src="https://via.placeholder.com/400/020205/00d2ff?text=LyraX+Standby" class="w-full aspect-square object-cover mb-8 shadow-2xl">
+        <div id="results" class="results-box h-40 overflow-y-auto mb-6 space-y-2"></div>
 
-        <div class="mb-6 border-l-2 border-cyan-500 pl-4">
-            <h2 id="track-name" class="text-xl font-black truncate tracking-tight">System Offline</h2>
-            <p id="artist-name" class="text-cyan-400/50 text-[10px] font-bold tracking-[0.2em] uppercase mt-1">Initialize Connection</p>
+        <div class="text-center">
+            <img id="art" src="https://via.placeholder.com/150/020205/00d2ff" class="w-32 h-32 mx-auto rounded-2xl mb-4 border border-cyan-500/20 shadow-lg">
+            <h2 id="name" class="text-lg font-bold truncate">No Track Selected</h2>
+            <p id="artist" class="text-cyan-400/50 text-xs mb-4 uppercase tracking-tighter">Choose a song above</p>
+            
+            <audio id="audio-player" controls class="w-full h-8 opacity-50 brightness-150"></audio>
         </div>
-
-        <div id="lyrics-container" class="lyrics-scroll text-center text-[11px] text-white/40 mb-8 italic leading-relaxed px-2">
-            Waiting for audio stream...
-        </div>
-
-        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-cyan-500 text-black font-black rounded-2xl hover:bg-white hover:scale-95 transition-all duration-300 shadow-lg shadow-cyan-500/20">
-            CONNECT SYSTEM
-        </button>
     </div>
 
     <script>
-        const BACKEND = "https://lyrax-backend.onrender.com"; 
-        const params = new URLSearchParams(window.location.search);
-        const token = params.get('token');
-        let currentTrackId = null;
+        const BACKEND = "https://your-render-backend.com";
 
-        function login() { window.location.href = `${BACKEND}/login`; }
+        async function search() {
+            const q = document.getElementById('query').value;
+            const res = await fetch(`${BACKEND}/api/search?q=${q}`);
+            const tracks = await res.json();
+            const container = document.getElementById('results');
+            container.innerHTML = "";
 
-        window.onSpotifyWebPlaybackSDKReady = () => {
-            if (!token) return;
-            const player = new Spotify.Player({
-                name: 'LyraX Blue Player',
-                getOAuthToken: cb => { cb(token); },
-                volume: 0.5
+            tracks.forEach(item => {
+                const t = item.data;
+                const div = document.createElement('div');
+                div.className = "flex items-center gap-3 p-2 hover:bg-white/5 rounded-xl cursor-pointer";
+                div.onclick = () => loadTrack(t);
+                div.innerHTML = `<img src="${t.albumOfTrack.coverArt.sources[0].url}" class="w-8 h-8 rounded-lg">
+                                 <div><p class="text-[10px] font-bold">${t.name}</p></div>`;
+                container.appendChild(div);
             });
+        }
 
-            player.addListener('player_state_changed', state => {
-                if (!state) return;
-                const track = state.track_window.current_track;
-                
-                // Update UI
-                document.getElementById('track-art').src = track.album.images[0].url;
-                document.getElementById('track-name').innerText = track.name;
-                document.getElementById('artist-name').innerText = track.artists[0].name;
-                document.getElementById('auth-btn').style.display = 'none';
+        async function loadTrack(t) {
+            document.getElementById('art').src = t.albumOfTrack.coverArt.sources[0].url;
+            document.getElementById('name').innerText = t.name;
+            document.getElementById('artist').innerText = t.artists.items[0].profile.name;
 
-                // Fetch Lyrics only if song changes (Saves your 500-request quota)
-                if (track.id !== currentTrackId) {
-                    currentTrackId = track.id;
-                    document.getElementById('lyrics-container').innerText = "Syncing lyrics...";
-
-                    fetch(`${BACKEND}/lyrics?track_id=${track.id}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.lyrics && data.lyrics.lines) {
-                                const lyricsHtml = data.lyrics.lines.map(l => l.words).join('<br><br>');
-                                document.getElementById('lyrics-container').innerHTML = lyricsHtml;
-                            } else {
-                                document.getElementById('lyrics-container').innerText = "Lyrics not available for this track.";
-                            }
-                        })
-                        .catch(() => {
-                            document.getElementById('lyrics-container').innerText = "Lyrics System Error.";
-                        });
-                }
-            });
-
-            player.addListener('ready', ({ device_id }) => {
-                document.getElementById('track-name').innerText = "Ready to Play";
-                document.getElementById('artist-name').innerText = "Switch device to LyraX";
-                document.getElementById('auth-btn').innerText = "SYSTEM CONNECTED";
-            });
-
-            player.connect();
-        };
+            // Fetch Audio Link
+            const res = await fetch(`${BACKEND}/api/audio?name=${t.name}&artist=${t.artists.items[0].profile.name}`);
+            const data = await res.json();
+            const player = document.getElementById('audio-player');
+            player.src = data.url;
+            player.play();
+        }
     </script>
 </body>
 </html>
