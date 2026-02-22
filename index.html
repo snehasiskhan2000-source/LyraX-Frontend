@@ -3,41 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LyraX - techbittu.in</title>
+    <title>LyraX Blue - techbittu.in</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
-        body { background: #050505; color: white; font-family: 'Inter', sans-serif; height: 100vh; overflow: hidden; }
-        .glass-card { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); border-radius: 40px; }
-        .neon-shadow { box-shadow: 0 0 40px rgba(29, 185, 84, 0.2); }
-        .progress-bar { height: 4px; background: #1DB954; border-radius: 2px; transition: width 1s linear; }
-        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
-        .status-pulse { animation: pulse 2s infinite; }
+        body { background: #020205; color: white; font-family: 'Syncopate', sans-serif; overflow: hidden; }
+        .blue-glow { box-shadow: 0 0 30px rgba(0, 210, 255, 0.3); }
+        .glass-blue { background: rgba(0, 10, 30, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(0, 210, 255, 0.2); }
+        .blue-text { color: #00d2ff; text-shadow: 0 0 10px rgba(0, 210, 255, 0.5); }
+        .lyrics-box { height: 100px; overflow-y: auto; scrollbar-width: none; mask-image: linear-gradient(transparent, black 20%, black 80%, transparent); }
     </style>
 </head>
-<body class="flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top,#112211,transparent)]">
+<body class="flex items-center justify-center h-screen bg-[radial-gradient(circle_at_bottom,#001a33,transparent)]">
 
-    <div id="player" class="glass-card w-full max-w-sm p-8 neon-shadow">
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-2xl font-black italic tracking-tighter">LYRA<span class="text-green-500">X</span></h1>
-            <span id="pnr-tag" class="text-[10px] bg-green-500/20 text-green-500 px-3 py-1 rounded-full font-bold border border-green-500/30">SYNCED</span>
+    <div id="player" class="glass-blue w-full max-w-sm p-8 rounded-[3rem] blue-glow">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-xl font-bold tracking-widest blue-text italic">LYRA<span class="text-white">X</span></h1>
+            <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
         </div>
 
-        <div class="relative mb-8 group">
-            <img id="track-art" src="https://via.placeholder.com/400/101010/1DB954?text=LyraX" class="w-full aspect-square rounded-[30px] object-cover shadow-2xl transition-all duration-500">
+        <img id="track-art" src="https://via.placeholder.com/400/020205/00d2ff?text=LYRAX+BLUE" class="w-full aspect-square rounded-[2rem] object-cover mb-6 border border-white/10">
+
+        <div class="mb-6">
+            <h2 id="track-name" class="text-xl font-bold truncate">Initialize System</h2>
+            <p id="artist-name" class="text-cyan-400/60 text-xs tracking-widest uppercase mt-1">Standby Mode</p>
         </div>
 
-        <div class="mb-8 border-l-2 border-green-500 pl-4">
-            <h2 id="track-name" class="text-xl font-bold truncate tracking-tight">System Online</h2>
-            <p id="artist-name" class="text-zinc-500 text-sm font-medium">Ready to receive stream</p>
+        <div id="lyrics-container" class="lyrics-box text-center text-xs text-white/40 mb-6 italic leading-relaxed">
+            Connect and play to sync lyrics...
         </div>
 
-        <div class="w-full bg-zinc-800 h-1 rounded-full mb-8 overflow-hidden">
-            <div id="progress" class="progress-bar" style="width: 0%"></div>
-        </div>
-
-        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-white text-black font-black rounded-2xl hover:scale-95 transition-transform">
-            INITIALIZE AUTH
+        <button onclick="login()" id="auth-btn" class="w-full py-4 bg-cyan-500 text-black font-black rounded-2xl hover:bg-white transition-all duration-300">
+            CONNECT SYSTEM
         </button>
     </div>
 
@@ -51,12 +48,11 @@
         window.onSpotifyWebPlaybackSDKReady = () => {
             if (!token) return;
             const player = new Spotify.Player({
-                name: 'LyraX Web Player',
+                name: 'LyraX Blue Player',
                 getOAuthToken: cb => { cb(token); },
                 volume: 0.5
             });
 
-            // --- THE FIX: LISTEN FOR SONG CHANGES ---
             player.addListener('player_state_changed', state => {
                 if (!state) return;
                 const track = state.track_window.current_track;
@@ -65,16 +61,22 @@
                 document.getElementById('track-name').innerText = track.name;
                 document.getElementById('artist-name').innerText = track.artists[0].name;
                 document.getElementById('auth-btn').style.display = 'none';
-                
-                // Progress Bar Logic
-                const percent = (state.position / state.duration) * 100;
-                document.getElementById('progress').style.width = percent + "%";
+
+                // Fetch Lyrics from our new Backend Route
+                fetch(`${BACKEND}/lyrics?track_id=${track.id}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        // Adjust 'data.lyrics' based on your specific RapidAPI response format
+                        document.getElementById('lyrics-container').innerText = data.lyrics || "Lyrics Synced via RapidAPI";
+                    })
+                    .catch(() => {
+                        document.getElementById('lyrics-container').innerText = "Lyrics currently unavailable.";
+                    });
             });
 
             player.addListener('ready', ({ device_id }) => {
-                document.getElementById('track-name').innerText = "Connected!";
-                document.getElementById('artist-name').innerText = "Select 'LyraX' in Spotify App";
-                document.getElementById('auth-btn').innerText = "DEVICE READY";
+                document.getElementById('track-name').innerText = "System Ready";
+                document.getElementById('auth-btn').innerText = "SELECT DEVICE";
             });
 
             player.connect();
